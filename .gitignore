@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+build/
+dist/
+*.egg-info/
+
+# uv の仮想環境（uv.lock があれば uv sync で再現できるので含めない）
+.venv/
+
+# エディタ / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
