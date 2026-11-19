@@ -5,6 +5,7 @@
 ## 目次
 
 - [dt（デルタタイム）](#dtデルタタイム)
+- [pygame.display.set_mode と Surface](#pygamedisplayset_mode-と-surface)
 
 ---
 
@@ -31,3 +32,34 @@ dt = self.clock.tick(FPS) / 1000   # tick() はミリ秒を返すので秒に直
 ```
 
 `clock.tick(FPS)` は「FPS を超えないように待つ」と「前回からの経過ミリ秒を返す」を同時にやってくれる。
+
+---
+
+## pygame.display.set_mode と Surface
+
+**ウィンドウを作り、そこに描くための画用紙（Surface）を返す。描いたものは `flip()` で初めて画面に出る。**
+
+```python
+self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))  # タプル 1 つで渡す
+```
+
+- `pygame.init()` の後に 1 回だけ呼び、戻り値を使い回す
+- `set_mode(600, 800)` はエラー。`set_mode((600, 800))` とカッコが二重になる
+
+### Surface（画用紙）
+
+- 絵を描ける板。画面も自機の `image` も同じ Surface
+- 自機の小さい画用紙を、画面の大きい画用紙に貼り付けて描いている
+
+### 描く → flip で見せる
+
+| 処理 | たとえ |
+|---|---|
+| `fill` / `draw` | 舞台裏で準備する |
+| `pygame.display.flip()` | 幕を開けて見せる |
+
+描きかけの絵が見えないので、チラつかない。
+
+### 座標
+
+左上が (0, 0)。x は右、**y は下**に行くほど大きい。上に動く = y を減らす。

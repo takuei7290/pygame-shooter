@@ -1,2 +1,6 @@
-def main() -> None:
-    print("Hello from shooter!")
+from .game import Game
+
+
+def main():
+    game = Game()
+    game.run()
