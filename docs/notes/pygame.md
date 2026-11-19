@@ -8,6 +8,8 @@
 - [pygame.display.set_mode と Surface](#pygamedisplayset_mode-と-surface)
 - [Rect（四角形の位置と大きさ）](#rect四角形の位置と大きさ)
 - [Sprite Group（キャラをまとめる箱）](#sprite-groupキャラをまとめる箱)
+- [斜め移動が速くなる問題と Vector2](#斜め移動が速くなる問題と-vector2)
+- [Rect は整数しか持てない（小数の移動がズレる）](#rect-は整数しか持てない小数の移動がズレる)
 
 ---
 
@@ -121,3 +123,73 @@ self.all_sprites.draw(self.screen)         # 全員の image を rect の位置�
 ### 1 つの Sprite を複数の箱に入れられる
 
 敵は「全員用の箱」と「敵だけの箱」の両方に入れておくと、まとめて描きつつ、当たり判定では敵だけを調べられる。`kill()` で両方から一度に消える。
+
+---
+
+## 斜め移動が速くなる問題と Vector2
+
+**縦横の向きをそのまま足すと、斜めは √2 倍（約 1.41 倍）速くなる。向きの長さを 1 にそろえる（正規化する）と直る。**
+
+### なぜ √2 倍か
+
+→↑ で `dx = 1, dy = -1`。進む距離は三角形の斜辺なので √(1² + 1²) = √2。
+
+| キー | 向き | 長さ | 正規化後 |
+|---|---|---|---|
+| → | (1, 0) | 1 | (1, 0) |
+| →↑ | (1, -1) | √2 | (0.707, -0.707) |
+
+### pygame.math.Vector2
+
+| 書き方 | 意味 |
+|---|---|
+| `pygame.math.Vector2(dx, dy)` | 向きをまとめる |
+| `v.length()` | 長さ |
+| `v.normalize()` | 長さを 1 にした新しいベクトルを返す |
+| `v.x` / `v.y` | 中身 |
+
+**長さ 0 のベクトルは normalize できない**（`ValueError`）。何も押していないときは正規化しない。
+
+```python
+direction = pygame.math.Vector2(1, -1)
+if direction.length() > 0:
+    direction = direction.normalize()   # (0.707, -0.707)
+```
+
+---
+
+## Rect は整数しか持てない（小数の移動がズレる）
+
+**`rect.x += 小数` は毎回四捨五入される（pygame 2.6.1）。端数が積み重なって速さがズレる。位置は小数で別に持ち、rect には写すだけにする。**
+
+### 何が起きるか
+
+1 フレームの移動量 = 速さ × dt（60 FPS で dt ≒ 0.016〜0.017）。1 秒動かした実測：
+
+| 速さ | 本当は | 実際 |
+|---|---|---|
+| 300 | 300 | 300 |
+| 100 | 100 | 120 |
+| 20 | 20 | 0（0.33 px が毎回 0 に丸められて動かない） |
+
+正規化した斜め移動のように、1 フレームの移動量が小数になるとズレやすい。
+
+### 直し方：小数の位置を別に持つ
+
+| 役割 | 使うもの |
+|---|---|
+| 本当の位置（計算用、小数） | `self.pos`（`Vector2`） |
+| 描画・当たり判定用（整数） | `self.rect` |
+
+```python
+# __init__（rect を作った後）
+self.pos = pygame.math.Vector2(self.rect.center)
+
+# update
+self.pos += direction * SPEED * dt
+self.rect.center = self.pos           # ここで初めて丸められる
+self.rect.clamp_ip(self.bounds)
+self.pos = pygame.math.Vector2(self.rect.center)  # 押し戻した位置を pos にも反映
+```
+
+最後の行がないと、pos だけ画面外へ進み続け、反対のキーを押してもしばらく戻らない。

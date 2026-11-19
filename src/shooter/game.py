@@ -33,7 +33,7 @@ class Game:
                 self.running = False
 
     def update(self, dt):
-        pass
+        self.all_sprites.update(dt)
 
     def draw(self):
         self.screen.fill(BG_COLOR)
