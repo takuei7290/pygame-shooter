@@ -22,3 +22,6 @@ build-backend = "uv_build"
 dev = [
     "ruff>=0.17.5",
 ]
+
+[tool.ruff]
+extend-exclude = ["docs"]
