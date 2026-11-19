@@ -148,6 +148,10 @@ self.all_sprites.draw(self.screen)         # 全員の image を rect の位置�
 | `v.normalize()` | 長さを 1 にした新しいベクトルを返す |
 | `v.x` / `v.y` | 中身 |
 
+- `pygame.math` は pygame に入っているベクトル用のモジュール（`Vector2`, `Vector3`）
+- `pygame.Vector2` と書いても同じもの（近道）
+- Python 標準の `import math`（`sqrt`, `pi` など）とは別物
+
 **長さ 0 のベクトルは normalize できない**（`ValueError`）。何も押していないときは正規化しない。
 
 ```python
@@ -188,8 +192,11 @@ self.pos = pygame.math.Vector2(self.rect.center)
 # update
 self.pos += direction * SPEED * dt
 self.rect.center = self.pos           # ここで初めて丸められる
+before = self.rect.center
 self.rect.clamp_ip(self.bounds)
-self.pos = pygame.math.Vector2(self.rect.center)  # 押し戻した位置を pos にも反映
+if self.rect.center != before:        # 押し戻されたときだけ
+    self.pos = pygame.math.Vector2(self.rect.center)
 ```
 
-最後の行がないと、pos だけ画面外へ進み続け、反対のキーを押してもしばらく戻らない。
+- 押し戻したのに pos を直さないと、pos だけ画面外へ進み続け、反対のキーを押してもしばらく戻らない
+- 逆に、**毎フレーム** pos を rect から作り直すと、小数が毎回捨てられて元の問題に戻る（実測：速さ 100 で 120px/秒、速さ 20 で動かない）
