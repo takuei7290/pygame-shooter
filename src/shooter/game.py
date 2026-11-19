@@ -2,6 +2,7 @@
 
 import pygame
 
+from .bullet import Bullet
 from .player import Player
 from .settings import BG_COLOR, FPS, SCREEN_HEIGHT, SCREEN_WIDTH, TITLE
 
@@ -16,6 +17,7 @@ class Game:
         self.all_sprites = pygame.sprite.Group()
         self.player = Player(self.screen.get_rect())
         self.all_sprites.add(self.player)
+        self.bullets = pygame.sprite.Group()
 
     def run(self):
         while self.running:
@@ -31,6 +33,13 @@ class Game:
                 event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
             ):
                 self.running = False
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                self.shoot()
+
+    def shoot(self):
+        bullet = Bullet(self.player.rect.midtop)
+        self.all_sprites.add(bullet)
+        self.bullets.add(bullet)
 
     def update(self, dt):
         self.all_sprites.update(dt)
