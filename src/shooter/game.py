@@ -2,6 +2,7 @@
 
 import pygame
 
+from .player import Player
 from .settings import BG_COLOR, FPS, SCREEN_HEIGHT, SCREEN_WIDTH, TITLE
 
 
@@ -12,6 +13,9 @@ class Game:
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.clock = pygame.time.Clock()
         self.running = True
+        self.all_sprites = pygame.sprite.Group()
+        self.player = Player(self.screen.get_rect())
+        self.all_sprites.add(self.player)
 
     def run(self):
         while self.running:
@@ -33,4 +37,5 @@ class Game:
 
     def draw(self):
         self.screen.fill(BG_COLOR)
+        self.all_sprites.draw(self.screen)
         pygame.display.flip()

@@ -6,6 +6,8 @@
 
 - [dt（デルタタイム）](#dtデルタタイム)
 - [pygame.display.set_mode と Surface](#pygamedisplayset_mode-と-surface)
+- [Rect（四角形の位置と大きさ）](#rect四角形の位置と大きさ)
+- [Sprite Group（キャラをまとめる箱）](#sprite-groupキャラをまとめる箱)
 
 ---
 
@@ -63,3 +65,59 @@ self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))  # タプ�
 ### 座標
 
 左上が (0, 0)。x は右、**y は下**に行くほど大きい。上に動く = y を減らす。
+
+---
+
+## Rect（四角形の位置と大きさ）
+
+**位置と大きさを持った四角形。四角形のいろいろな場所を名前で読み書きでき、代入すると四角形ごと動く。**
+
+- `surface.get_rect()` で、その Surface と同じ大きさの Rect が取れる（画面なら `self.screen.get_rect()`）
+- Sprite の `self.rect` も Rect
+
+### よく使う名前（600×800 の画面の場合）
+
+| 名前 | 意味 | 値 |
+|---|---|---|
+| `left` / `right` | 左端 / 右端の x | 0 / 600 |
+| `top` / `bottom` | 上端 / 下端の y | 0 / 800 |
+| `centerx` / `centery` | 真ん中の x / y | 300 / 400 |
+| `center` | 真ん中 `(x, y)` | (300, 400) |
+| `midbottom` | 下辺の真ん中 `(x, y)` | (300, 800) |
+| `width` / `height` | 幅 / 高さ | 600 / 800 |
+
+### 代入すると動く
+
+```python
+self.rect = self.image.get_rect(midbottom=(300, 760))  # 作るときに位置を指定
+self.rect.left = 0                                      # 左端が 0 になるように移動（大きさはそのまま）
+```
+
+---
+
+## Sprite Group（キャラをまとめる箱）
+
+**Sprite をまとめて入れる箱。中の全員に update や描画を 1 行でやらせられる。**
+
+```python
+self.all_sprites = pygame.sprite.Group()   # 空の箱
+self.all_sprites.add(self.player)          # 入れる
+self.all_sprites.update(dt)                # 全員の update(dt) を呼ぶ
+self.all_sprites.draw(self.screen)         # 全員の image を rect の位置に描く
+```
+
+たとえ：Group はクラス、Sprite は生徒。先生（Game）が「みんな動いて」と言えば、生徒は自分のやり方で動く。先生は動き方を知らなくていい。
+
+### よく使うもの
+
+| 書き方 | やること |
+|---|---|
+| `group.add(sprite)` | 箱に入れる |
+| `group.update(dt)` | 全員の `update(dt)` を呼ぶ |
+| `group.draw(surface)` | 全員を描く（`image` と `rect` を使うので名前は変えない） |
+| `sprite.kill()` | 入っている**全部の**箱から取り出す |
+| `len(group)` | 何個入っているか |
+
+### 1 つの Sprite を複数の箱に入れられる
+
+敵は「全員用の箱」と「敵だけの箱」の両方に入れておくと、まとめて描きつつ、当たり判定では敵だけを調べられる。`kill()` で両方から一度に消える。
