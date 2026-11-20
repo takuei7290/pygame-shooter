@@ -95,6 +95,38 @@ self.rect = self.image.get_rect(midbottom=(300, 760))  # 作るときに位置�
 self.rect.left = 0                                      # 左端が 0 になるように移動（大きさはそのまま）
 ```
 
+### get_rect() で位置を指定する
+
+`surface.get_rect(場所の名前=値)` で、「四角形のその場所」を「その値」に合わせて作る。大きさは画像から自動で決まるので、書くのは位置だけ。何も書かないと左上 (0, 0) に置かれる。
+
+| 場所の名前 | 種類 | 渡す値 |
+|---|---|---|
+| `left` `right` `centerx` | 縦の線（x だけ） | 数字 1 つ |
+| `top` `bottom` `centery` | 横の線（y だけ） | 数字 1 つ |
+| `center` `midtop` `midbottom` `topleft` など | 点 | `(x, y)` のタプル |
+
+- 点：四角形の 1 か所（角・辺の真ん中・中心）。縦横両方が要るので `(x, y)`
+- 線：辺 1 本。`bottom` は横に伸びた辺なので y だけ、`left` は縦に伸びた辺なので x だけで決まる
+
+```
+  topleft     midtop     topright
+     ●──────────●──────────●   ← top
+     │                     │
+ left│        center       │right
+     ●          ●          ●
+     │                     │
+     ●──────────●──────────●   ← bottom
+ bottomleft  midbottom  bottomright
+```
+
+x を決める名前と y を決める名前を 1 つずつ書けば組み合わせられる。40×30 の画像の場合（pygame 2.6.1 で確認）：
+
+```python
+image.get_rect()                       # (0, 0, 40, 30)
+image.get_rect(center=(100, 100))      # (80, 85, 40, 30)
+image.get_rect(left=50, bottom=0)      # (50, -30, 40, 30)  画面の上の外に置ける
+```
+
 ---
 
 ## Sprite Group（キャラをまとめる箱）
