@@ -7,8 +7,12 @@ from .enemy import Enemy
 from .player import Player
 from .settings import (
     BG_COLOR,
+    ENEMY_SCORE,
     ENEMY_SPAWN_INTERVAL,
     FPS,
+    SCORE_COLOR,
+    SCORE_FONT_SIZE,
+    SCORE_POS,
     SCREEN_HEIGHT,
     SCREEN_WIDTH,
     TITLE,
@@ -28,6 +32,8 @@ class Game:
         self.bullets = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
         self.spawn_timer = 0
+        self.score = 0
+        self.font = pygame.font.Font(None, SCORE_FONT_SIZE)
 
     def run(self):
         while self.running:
@@ -62,8 +68,12 @@ class Game:
             self.spawn_enemy()
             self.spawn_timer -= ENEMY_SPAWN_INTERVAL
         self.all_sprites.update(dt)
+        hits = pygame.sprite.groupcollide(self.enemies, self.bullets, True, True)
+        self.score += len(hits) * ENEMY_SCORE
 
     def draw(self):
         self.screen.fill(BG_COLOR)
         self.all_sprites.draw(self.screen)
+        score_image = self.font.render(f"SCORE: {self.score}", True, SCORE_COLOR)
+        self.screen.blit(score_image, SCORE_POS)
         pygame.display.flip()
