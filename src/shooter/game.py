@@ -3,8 +3,16 @@
 import pygame
 
 from .bullet import Bullet
+from .enemy import Enemy
 from .player import Player
-from .settings import BG_COLOR, FPS, SCREEN_HEIGHT, SCREEN_WIDTH, TITLE
+from .settings import (
+    BG_COLOR,
+    ENEMY_SPAWN_INTERVAL,
+    FPS,
+    SCREEN_HEIGHT,
+    SCREEN_WIDTH,
+    TITLE,
+)
 
 
 class Game:
@@ -18,6 +26,8 @@ class Game:
         self.player = Player(self.screen.get_rect())
         self.all_sprites.add(self.player)
         self.bullets = pygame.sprite.Group()
+        self.enemies = pygame.sprite.Group()
+        self.spawn_timer = 0
 
     def run(self):
         while self.running:
@@ -41,7 +51,16 @@ class Game:
         self.all_sprites.add(bullet)
         self.bullets.add(bullet)
 
+    def spawn_enemy(self):
+        enemy = Enemy(self.screen.get_rect())
+        self.all_sprites.add(enemy)
+        self.enemies.add(enemy)
+
     def update(self, dt):
+        self.spawn_timer += dt
+        if self.spawn_timer >= ENEMY_SPAWN_INTERVAL:
+            self.spawn_enemy()
+            self.spawn_timer -= ENEMY_SPAWN_INTERVAL
         self.all_sprites.update(dt)
 
     def draw(self):
