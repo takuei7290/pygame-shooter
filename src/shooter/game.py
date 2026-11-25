@@ -10,6 +10,8 @@ from .settings import (
     ENEMY_SCORE,
     ENEMY_SPAWN_INTERVAL,
     FPS,
+    GAME_OVER_COLOR,
+    GAME_OVER_FONT_SIZE,
     SCORE_COLOR,
     SCORE_FONT_SIZE,
     SCORE_POS,
@@ -34,6 +36,8 @@ class Game:
         self.spawn_timer = 0
         self.score = 0
         self.font = pygame.font.Font(None, SCORE_FONT_SIZE)
+        self.game_over_font = pygame.font.Font(None, GAME_OVER_FONT_SIZE)
+        self.game_over = False
 
     def run(self):
         while self.running:
@@ -63,12 +67,16 @@ class Game:
         self.enemies.add(enemy)
 
     def update(self, dt):
+        if self.game_over:
+            return
         self.spawn_timer += dt
         if self.spawn_timer >= ENEMY_SPAWN_INTERVAL:
             self.spawn_enemy()
             self.spawn_timer -= ENEMY_SPAWN_INTERVAL
         self.all_sprites.update(dt)
         hits = pygame.sprite.groupcollide(self.enemies, self.bullets, True, True)
+        if pygame.sprite.spritecollideany(self.player, self.enemies):
+            self.game_over = True
         self.score += len(hits) * ENEMY_SCORE
 
     def draw(self):
@@ -76,4 +84,8 @@ class Game:
         self.all_sprites.draw(self.screen)
         score_image = self.font.render(f"SCORE: {self.score}", True, SCORE_COLOR)
         self.screen.blit(score_image, SCORE_POS)
+        if self.game_over:
+            text = self.game_over_font.render("GAME OVER", True, GAME_OVER_COLOR)
+            text_rect = text.get_rect(center=self.screen.get_rect().center)
+            self.screen.blit(text, text_rect)
         pygame.display.flip()
