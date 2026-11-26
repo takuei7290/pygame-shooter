@@ -9,6 +9,8 @@ from .settings import (
     BG_COLOR,
     ENEMY_SCORE,
     ENEMY_SPAWN_INTERVAL,
+    GAME_OVER_COLOR,
+    GAME_OVER_FONT_SIZE,
     SCORE_COLOR,
     SCORE_FONT_SIZE,
     SCORE_POS,
@@ -63,9 +65,28 @@ class PlayScene(Scene):
         self.all_sprites.update(dt)
         hits = pygame.sprite.groupcollide(self.enemies, self.bullets, True, True)
         self.score += len(hits) * ENEMY_SCORE
+        if pygame.sprite.spritecollideany(self.player, self.enemies):
+            self.game.change_scene(GameOverScene(self.game, self))
 
     def draw(self, screen):
         screen.fill(BG_COLOR)
         self.all_sprites.draw(screen)
         score_image = self.font.render(f"SCORE: {self.score}", True, SCORE_COLOR)
         screen.blit(score_image, SCORE_POS)
+
+
+class GameOverScene(Scene):
+    def __init__(self, game, play_scene):
+        super().__init__(game)
+        self.play_scene = play_scene
+        self.font = pygame.font.Font(None, GAME_OVER_FONT_SIZE)
+
+    def handle_event(self, event):
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+            self.game.change_scene(PlayScene(self.game))
+
+    def draw(self, screen):
+        self.play_scene.draw(screen)
+        text = self.font.render("GAME OVER", True, GAME_OVER_COLOR)
+        text_rect = text.get_rect(center=screen.get_rect().center)
+        screen.blit(text, text_rect)
