@@ -7,9 +7,13 @@
 - [dt（デルタタイム）](#dtデルタタイム)
 - [pygame.display.set_mode と Surface](#pygamedisplayset_mode-と-surface)
 - [Rect（四角形の位置と大きさ）](#rect四角形の位置と大きさ)
+- [文字を描く（Font と render）](#文字を描くfont-と-render)
+- [描画まわりのメソッドの整理](#描画まわりのメソッドの整理)
+- [Surface の作り方いろいろ（画像ファイル・図形）](#surface-の作り方いろいろ画像ファイル図形)
 - [Sprite Group（キャラをまとめる箱）](#sprite-groupキャラをまとめる箱)
 - [斜め移動が速くなる問題と Vector2](#斜め移動が速くなる問題と-vector2)
 - [Rect は整数しか持てない（小数の移動がズレる）](#rect-は整数しか持てない小数の移動がズレる)
+- [当たり判定の形（四角・円・マスク）](#当たり判定の形四角円マスク)
 
 ---
 
@@ -77,6 +81,26 @@ self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))  # タプ�
 - `surface.get_rect()` で、その Surface と同じ大きさの Rect が取れる（画面なら `self.screen.get_rect()`）
 - Sprite の `self.rect` も Rect
 
+### image と rect の分担
+
+**Rect は「画面のどこからどこまで」という範囲。四角形を画面の上に描き表すには、大きさだけでなく位置も必要なので、4 つの数字 (x, y, 幅, 高さ) で持つ。**
+
+| | image（Surface） | rect（Rect） |
+|---|---|---|
+| 持っているもの | 絵の中身（色の点の集まり）と大きさ | 位置と大きさ（数字 4 つ） |
+| たとえ | 車 | 駐車場の白線の枠 |
+| 使う場面 | 描くとき（何を描くか） | 描くとき（どこに描くか）・動かすとき・当たり判定 |
+
+- 分けておくと、動かすときや当たり判定は数字 4 つの rect だけで済み、重い絵には触らなくていい
+- 大きさは普通 `image.get_rect()` で image に合わせるが、別物なので位置は rect にしかない
+
+**image を rect に貼るのではない。** rect は絵を持てない（ただの数字）。`screen.blit(image, rect)` は、image を**画面に直接**貼り、貼る位置として rect の左上だけを使う。rect の大きさは描画では使われない（わざと 5×5 の Rect を渡しても、40×30 の絵がそのまま描かれる。pygame 2.6.1 で確認）。
+
+```
+screen（画用紙） ← image（シール）を貼る
+                    ↑ 貼る場所は rect の左上 (x, y) を見て決める
+```
+
 ### よく使う名前（600×800 の画面の場合）
 
 | 名前 | 意味 | 値 |
@@ -98,6 +122,14 @@ self.rect.left = 0                                      # 左端が 0 になる�
 ### get_rect() で位置を指定する
 
 `surface.get_rect(場所の名前=値)` で、「四角形のその場所」を「その値」に合わせて作る。大きさは画像から自動で決まるので、書くのは位置だけ。何も書かないと左上 (0, 0) に置かれる。
+
+**get_rect は「情報を取るだけ」ではなく、呼ぶたびに新しい Rect を作って返す。** Surface 自体は位置を持っていない。位置を持つのは返ってきた Rect なので、`self.rect` に入れて覚えておく（pygame 2.6.1 で確認）：
+
+```python
+a = img.get_rect(left=100, bottom=0)  # (100, -30, 40, 30)  新しい Rect
+a.x = 500                             # a だけが動く
+img.get_rect()                        # (0, 0, 40, 30)  img は何も覚えていない
+```
 
 | 場所の名前 | 種類 | 渡す値 |
 |---|---|---|
@@ -126,6 +158,123 @@ image.get_rect()                       # (0, 0, 40, 30)
 image.get_rect(center=(100, 100))      # (80, 85, 40, 30)
 image.get_rect(left=50, bottom=0)      # (50, -30, 40, 30)  画面の上の外に置ける
 ```
+
+**Rect を表示すると `(left, top, width, height)` の順で出る。** 下端（bottom）を指定しても、表示されるのは上端（top）。`bottom=0` で高さ 30 なら、top = 0 − 30 = **−30**。y は上に行くほど小さいので、マイナスは画面より上（外）を意味する。
+
+### `center=screen_rect.center` のように名前が 2 回出てくる理由
+
+**`=` の左は「新しく作る四角形のどこを」、右は「どこに合わせるか（値）」。同じ名前になるのは「自分の真ん中を、画面の真ん中に」と同じ場所どうしを合わせたいときだけ。**
+
+```python
+text.get_rect(center=self.screen.get_rect().center)
+#             ~~~~~~ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#             文字の真ん中を   画面の真ん中 (300, 400) に合わせる
+```
+
+| 書き方 | 左（自分のどこ） | 右（どこに） | 結果 |
+|---|---|---|---|
+| `text.get_rect(center=screen_rect.center)` | 文字の真ん中 | 画面の真ん中 | 画面の中央に置く |
+| `image.get_rect(bottom=bounds.top)`（敵） | 敵の下端 | 画面の上端 | 画面のすぐ上の外に置く |
+
+- 左はキーワード引数の名前（決まった名前しか書けない）、右はただの値。`center=(300, 400)` と数字で書いても同じ
+- 名前が同じなのはたまたま。敵のように左右で違う名前になることも多い
+
+**Surface が決めるのは大きさだけで、位置は決めない。** だから登場人物が 2 人いる。
+
+| 登場人物 | 決めること |
+|---|---|
+| `text`（文字の Surface） | 四角形の大きさ（303×49） |
+| `self.screen`（画面） | 四角形を置く場所（真ん中 = (300, 400)） |
+
+1 行の書き方は、次の 2 行をまとめたもの（pygame 2.6.1 で同じ結果を確認）：
+
+```python
+text_rect = text.get_rect()                       # (0, 0, 303, 49)    大きさだけ決まる。位置は左上
+text_rect.center = self.screen.get_rect().center  # (149, 376, 303, 49) 真ん中へ動かす
+```
+
+---
+
+## 文字を描く（Font と render）
+
+**`font.render(...)` は、文字を描いた Surface（画像）を返す。あとは自機の image と同じように blit する。**
+
+| 書き方 | 返すもの | たとえ |
+|---|---|---|
+| `pygame.font.Font(None, 72)` | `Font` | はんこ（文字の形と大きさ） |
+| `font.render("GAME OVER", True, 色)` | `Surface`（大きさは文字に合わせて自動。72 なら 303×49） | はんこを押した紙 |
+
+```python
+text = self.game_over_font.render("GAME OVER", True, GAME_OVER_COLOR)  # この時点で text は Surface
+self.screen.blit(text, text_rect)
+```
+
+- 2 つ目の `True` はアンチエイリアス（文字のふちをなめらかにする）
+- Font は `__init__` で 1 回作る。render は文字が変わるなら毎フレーム呼ぶ（スコアなど）
+
+### `Font(None, 36)` の None
+
+**1 つ目の引数はフォントファイルの場所。`None` は「ファイルは指定しない。pygame に入っている標準フォント（freesansbold.ttf）を使う」という意味。** 2 つ目は文字の大きさ。
+
+| 書き方 | 使うフォント |
+|---|---|
+| `pygame.font.Font(None, 36)` | pygame の標準フォント |
+| `pygame.font.Font("assets/xxx.ttf", 36)` | 自分で用意したフォントファイル |
+| `pygame.font.SysFont("meiryo", 36)` | PC に入っているフォントを名前で探す |
+
+- 標準フォントは英数字だけ。**日本語は表示できない**（「あ」を render すると幅 10 の小さな絵になり、文字にならない。pygame 2.6.1 で確認）
+- 日本語を出したいときは、日本語の入ったフォントファイルか SysFont を使う
+
+---
+
+## 描画まわりのメソッドの整理
+
+**描画は「絵を作る → 塗る → 画面に貼る → 見せる」の 4 段階。メソッドが多いのは、段階ごとに担当が分かれているから。**
+
+| 段階 | メソッド | 誰のメソッド | やること |
+|---|---|---|---|
+| 作る | `pygame.Surface((幅, 高さ))` | pygame | 白紙の絵を作る |
+| 作る | `font.render(文字, True, 色)` | Font | 文字を描いた絵を作る |
+| 塗る | `surface.fill(色)` | Surface | 絵全体を 1 色で塗る（画面なら背景を塗って前のフレームを消す） |
+| 場所 | `surface.get_rect(...)` | Surface | 貼る場所と大きさの Rect を作る |
+| 貼る | `screen.blit(絵, 場所)` | Surface | 絵を 1 枚、画面に貼る |
+| 貼る | `group.draw(screen)` | Group | 中の全員を blit する（for で blit を回すのと同じ） |
+| 見せる | `pygame.display.flip()` | pygame | 裏で描いた画面を、まとめて表に出す |
+
+```python
+def draw(self):
+    self.screen.fill(BG_COLOR)                 # 塗る：前のフレームを消す
+    self.all_sprites.draw(self.screen)         # 貼る：キャラ全員
+    score_image = self.font.render(...)        # 作る：文字の絵
+    self.screen.blit(score_image, SCORE_POS)   # 貼る：文字
+    pygame.display.flip()                      # 見せる
+```
+
+- Game の `draw()`（自分で作ったメソッド）と Group の `draw()`（pygame のメソッド）は、名前が同じだけの別物
+- 後から貼ったものが上に重なる。だから 背景 → キャラ → 文字 の順
+
+---
+
+## Surface の作り方いろいろ（画像ファイル・図形）
+
+**image は Surface でさえあればよい。白紙を塗る以外に、画像ファイルを読み込んだり、図形を描いたりして作れる。rect・blit・当たり判定はそのまま使える。**
+
+| 作り方 | 書き方 | 大きさ |
+|---|---|---|
+| 白紙を 1 色で塗る（今のやり方） | `pygame.Surface((40, 40))` → `.fill(色)` | 自分で指定 |
+| 画像ファイルを読む | `pygame.image.load("assets/player.png").convert_alpha()` | 画像ファイルの大きさ |
+| 図形を描く | 透明な Surface に `pygame.draw.circle(surface, 色, 中心, 半径)` など | 自分で指定 |
+| 文字 | `font.render(...)` | 文字に合わせて自動 |
+
+```python
+self.image = pygame.image.load("assets/player.png").convert_alpha()
+self.image = pygame.transform.scale(self.image, (PLAYER_WIDTH, PLAYER_HEIGHT))  # 大きさをそろえる
+self.rect = self.image.get_rect(midbottom=...)   # ここから下は今までと同じ
+```
+
+- `convert_alpha()` は、画面に貼りやすい形に変換して描画を速くする（透明も保つ）。**`set_mode` の後でないとエラー**（`No video mode has been set`。pygame 2.6.1 で確認）
+- 読み込みは `__init__` で 1 回。毎フレーム load すると重い。同じ絵の敵がたくさん出るなら、1 回読んだ絵を使い回すとよい
+- `transform.scale` で大きさを変えられる（64×48 の画像 → 40×30 を確認）
 
 ---
 
@@ -232,3 +381,26 @@ if self.rect.center != before:        # 押し戻されたときだけ
 
 - 押し戻したのに pos を直さないと、pos だけ画面外へ進み続け、反対のキーを押してもしばらく戻らない
 - 逆に、**毎フレーム** pos を rect から作り直すと、小数が毎回捨てられて元の問題に戻る（実測：速さ 100 で 120px/秒、速さ 20 で動かない）
+
+---
+
+## 当たり判定の形（四角・円・マスク）
+
+**`spritecollideany` や `groupcollide` は、ふつう rect（四角）どうしが重なったかで判定する。絵が丸や変な形でも、当たり判定は四角になる。**
+
+透明な部分（絵のすき間）に触れただけでも当たりになる。形に合わせたいときは、関数の最後に判定のしかたを渡す。
+
+| 渡すもの | 判定の形 | 特徴 |
+|---|---|---|
+| なし（ふつう） | rect の四角 | 速い。今の色付き四角ならこれで十分 |
+| `pygame.sprite.collide_circle` | 円 | 両方を円とみなす（rect から半径を決める）。丸いキャラ向け |
+| `pygame.sprite.collide_mask` | 絵の形そのもの | 透明でない点が重なったときだけ当たり。正確だが重い |
+
+```python
+pygame.sprite.spritecollideany(self.player, self.enemies, pygame.sprite.collide_mask)
+```
+
+丸い敵（40×40 の円）と四角い自機の角だけが重なる配置で試した結果（pygame 2.6.1）：rect → 当たり、collide_mask → 当たらない。
+
+- collide_mask を使うには、image を透明が使える形（`pygame.Surface(大きさ, pygame.SRCALPHA)`）で作る
+- シューティングでは、わざと当たり判定を絵より小さくすることも多い（自機がぎりぎりで避けられて気持ちいい）。`rect.inflate(-10, -10)` で上下左右を 5 ずつ縮めた四角が作れる
