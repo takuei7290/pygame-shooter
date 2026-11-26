@@ -28,6 +28,11 @@ class Game:
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.clock = pygame.time.Clock()
         self.running = True
+        self.font = pygame.font.Font(None, SCORE_FONT_SIZE)
+        self.game_over_font = pygame.font.Font(None, GAME_OVER_FONT_SIZE)
+        self.reset()
+
+    def reset(self):
         self.all_sprites = pygame.sprite.Group()
         self.player = Player(self.screen.get_rect())
         self.all_sprites.add(self.player)
@@ -35,8 +40,6 @@ class Game:
         self.enemies = pygame.sprite.Group()
         self.spawn_timer = 0
         self.score = 0
-        self.font = pygame.font.Font(None, SCORE_FONT_SIZE)
-        self.game_over_font = pygame.font.Font(None, GAME_OVER_FONT_SIZE)
         self.game_over = False
 
     def run(self):
@@ -53,8 +56,19 @@ class Game:
                 event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
             ):
                 self.running = False
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+            if (
+                event.type == pygame.KEYDOWN
+                and event.key == pygame.K_SPACE
+                and not self.game_over
+            ):
                 self.shoot()
+
+            if (
+                event.type == pygame.KEYDOWN
+                and event.key == pygame.K_r
+                and self.game_over
+            ):
+                self.reset()
 
     def shoot(self):
         bullet = Bullet(self.player.rect.midtop)
